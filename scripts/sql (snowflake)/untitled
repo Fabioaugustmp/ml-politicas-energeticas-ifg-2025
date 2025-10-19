@@ -208,3 +208,4 @@ JOIN
     CORE.STG_INMET_WMO w
     ON W.id_wmo = s.id_wmo; -- ou s.id_wmo, se estiver vindo do CSV
 
+
