@@ -1,24 +1,10 @@
 # Projeto Goiás Renovável — ml-politicas-energeticas-ifg-2025
 
+## Visão geral
 
+Este repositório contém o código, DAGs, notebooks e utilitários para o pipeline de ingestão, transformação (dbt) e treinamento de modelos do projeto "Goiás Renovável" — Módulo 2 do curso POS IA IFG (2025/1). O fluxo geral é: ingestão de dados públicos → armazenamento em S3 → carga no DWH → transformações com dbt → treinamento e registro de modelos.
 
-# Descrição do projeto
-
-Este repositório contém o código, DAGs, notebooks e utilitários para o pipeline de ingestão, transformação (dbt) e treino de modelos para o projeto "Goiás Renovável" — Módulo 2 do curso POS IA IFG (2025/1). O fluxo geral é ingestão de dados públicos → armazenamento em S3 → carga no DWH → transformações com dbt → treinamento e registro de modelos.
-
-## Estrutura do repositório (visão simplificada)
-
-- `dags/` — Airflow DAGs responsáveis por ingestão, ETL/ELT e tarefas operacionais.
-- `dbt/` e `include/dbt_inmet_s3_ingestion/` — projetos dbt com modelos SQL para transformação de dados INMET/RAW.
-- `scripts/` — utilitários (upload S3, manipulação de nomes, helpers).
-- `drive/` — amostras de dados e artefatos (não versionar dados sensíveis em repositórios públicos).
-- Notebooks na raiz (`*.ipynb`) — análises exploratórias e notebooks de treinamento (Colab-ready).
-- `requirements.txt` — dependências Python (existem também `requirements.txt` em subprojetos/dbt).
-- `Dockerfile`, `compose/` — configuração de runtime para Airflow/Astro.
-
-> Observação: a lógica auxiliar está espalhada entre `dags/` e `scripts/`. Recomenda-se consolidar em `src/` para melhor testabilidade e reutilização.
-
----
+## Arquitetura (mermaid)
 
 ```mermaid
 graph TD
@@ -71,9 +57,29 @@ graph TD
     S3_MODELS -->|Deploy| G
 ```
 
+## Estrutura do repositório (resumo)
+
+- `dags/` — Airflow DAGs de ingestão, ETL/ELT e tarefas operacionais.
+- `dbt/` e `include/dbt_inmet_s3_ingestion/` — projetos dbt para transformação de dados.
+- `scripts/` — utilitários (upload S3, manipulação de nomes, helpers).
+- `drive/` — amostras de dados e artefatos (não versionar dados sensíveis).
+- Notebooks na raiz (`*.ipynb`) — EDA e treinamento.
+- `requirements.txt` — dependências Python (existem `requirements.txt` também nos subprojetos dbt).
+- `Dockerfile`, `compose/` — configuração de runtime para Airflow.
+
+> Observação: há lógica auxiliar em `dags/` e `scripts/`. Recomenda-se consolidar em `src/` para melhor testabilidade e reutilização.
+
 ---
 
-## Setup mínimo (local de desenvolvimento)
+## Pré-requisitos
+
+- Python 3.10+ para execução local de scripts.
+- Docker e Docker Compose para orquestrar Airflow localmente.
+- Credenciais AWS (para acesso ao S3) e credenciais Snowflake (para carga/transformação), configuradas via Airflow Connections ou variáveis de ambiente.
+
+---
+
+## Setup rápido (local)
 
 1) Criar ambiente Python e instalar dependências:
 
@@ -84,112 +90,106 @@ pip install -r requirements.txt
 ```
 
 2) Configurar conexões e variáveis (Airflow):
-- Criar conexões `aws_default` e `snowflake_default` via UI do Airflow ou `airflow connections add`.
+- Criar conexões `aws_default` e `snowflake_default` via UI do Airflow (Recom.) ou via CLI.
 - Preferir Secret Backends ou AWS Secrets Manager para credenciais.
 
-3) Rodar Airflow local (ex.: Astronomer ou docker-compose conforme `compose/`):
+---
+
+## Executando com Docker Compose (Airflow)
+
+Suba um cluster simples (webserver em http://localhost:8081):
 
 ```bash
-# Exemplo com Astro (se usar Astronomer):
-# astro dev start
-
-# Exemplo com docker-compose (ajuste caminhos conforme necessário):
-# docker-compose -f compose/airflow.yml up --build
+docker compose -f compose/airflow.yml up --build -d
 ```
 
-4) Executar dbt (dentro do ambiente/contêiner apropriado):
+Primeiro acesso e checagens úteis:
 
 ```bash
-# entre no diretório do projeto dbt
+# Ver logs do webserver
+docker compose -f compose/airflow.yml logs -f airflow-webserver
+
+# Listar DAGs disponíveis
+docker compose -f compose/airflow.yml exec airflow-webserver airflow dags list
+
+# (Exemplo) disparar uma DAG pelo ID
+docker compose -f compose/airflow.yml exec airflow-webserver \
+  airflow dags trigger <SEU_DAG_ID>
+```
+
+Outros serviços:
+- Flower: http://localhost:5555
+- Redis: 6379 (local)
+
+Para encerrar:
+
+```bash
+docker compose -f compose/airflow.yml down -v
+```
+
+---
+
+## Executando dbt
+
+Execute dbt no projeto de ingestão INMET (ajuste o profile conforme seu ambiente):
+
+```bash
 cd include/dbt_inmet_s3_ingestion
-# dbt run --profiles-dir . --project-dir .
+dbt debug --profiles-dir . --project-dir .
+dbt run   --profiles-dir . --project-dir .
+dbt test  --profiles-dir . --project-dir .
 ```
 
 ---
 
-## DAGs (descrição breve) — atenção ao diretório `dags/`
+## Scripts úteis
 
-Lista resumida das DAGs encontradas e propósito operacional (mantenha esta seção atualizada):
+Upload de arquivos listados em `drive/files.txt` para S3 (vide `scripts/README.md` para detalhes):
 
-- `dbt_snowflake_dag.py`
-  - DAG de debugging: procura `profiles.yml` e executa `dbt debug` para validar configuração do dbt.
+```bash
+# Dry-run (somente verificar caminhos)
+python3 scripts/upload_files_to_s3.py --dry-run --prefix drive
 
-- `dbt_inmet_dag.py`
-  - Orquestra execução de modelos dbt por ano. Invoca `dbt run --select dados_meteriologicos_inmet` passando variável `inmet_s3_path` para consumir CSVs INMET no S3.
+# Upload (defina bucket e prefix conforme necessário)
+python3 scripts/upload_files_to_s3.py --bucket <SEU_BUCKET> --prefix drive --upload-metrics
+```
 
-- `inmet_data_to_snowflake_dbt_etl.py`
-  - Pipeline ELT principal: cria file formats/staging no Snowflake, enumera arquivos S3 por ano, executa `COPY INTO` para inserir raw CSVs no staging e mapeia tasks por arquivo/ano com TaskFlow e TaskGroup.
-
-- `read_data_then_sent.py` (s3_to_snowflake_inmet_loader)
-  - Lê arquivos S3 via boto3/S3Hook, processa CSV com pandas (latin-1, skiprows) e escreve no Snowflake via `write_pandas`.
-
-- Variações `inmet_csv_to_s3*` (`inmet_csv_to_s3.py`, `inmet_csv_to_s3_all_years.py`, `inmet_csv_to_s3_decorators.py`, `inmet_csv_to_s3_streaming`)
-  - Pipelines para baixar ZIPs do portal INMET, extrair CSVs (local ou em memória) e enviar para S3 — diferentes estratégias (streaming, in-memory, paralelização).
-
-- `inmet_data_download.py`, `inmet_data_download_all.py`
-  - DAGs focadas no download e preparação dos arquivos (por ano).
-
-- `inmet_data_cleaner.py`, `clean_s3_keep_go_csv.py`
-  - Limpeza e retenção seletiva no bucket S3 (mantém arquivos que contenham padrão `_GO_` ou `GO`).
-
-Observação: a maioria dos DAGs inclui comentários explicativos — bom para operação. Recomendo extrair helpers (S3 list/upload, parsing CSV, COPY INTO builders) para `src/`.
+Outros scripts:
+- `scripts/list_s3.py`, `scripts/rename_s3_files.sh` — utilitários diversos. Use `-h` para ajuda quando disponível.
 
 ---
 
-## Uso do dbt para ELT e Snowflake
+## Notebooks
 
-O projeto usa dbt como camada de transformação (T no ELT). Padrão observado:
+- `exploratory_data_analysis.ipynb` — EDA básica.
+- `CC_ML_TRAINING_MODEL.ipynb` — treinamento de modelo (Colab-ready).
 
-1. Ingestão: arquivos CSV são colocados no S3 (raw).
-2. Load: DAGs realizam a carga para o DWH (Snowflake) — via `COPY INTO` ou `write_pandas`.
-3. Transformação com dbt: os modelos dbt leem as tabelas staging no DWH e produzem tabelas/visões analíticas (marts).
-
-Recomendações práticas:
-
-- Padronizar `profiles.yml` para Snowflake (ou documentar perfis distintos) e colocar `profiles.example.yml` no repositório com placeholders.
-- Preferir `COPY INTO` para cargas em escala; use `write_pandas` para cargas pequenas/experimentais.
-- Criar jobs dbt (`dbt run`, `dbt test`) como tasks airflow ou via Cosmos (já há indícios de uso de `cosmos.DbtDag`).
+Recomendação: use um kernel Python do seu virtualenv (`.venv`) e garanta que as dependências estejam instaladas.
 
 ---
 
-## Observações sobre reprodutibilidade e segurança
+## DAGs (descrição breve)
 
-- Já existem `Dockerfile` e `compose/` para rodar Airflow (boa prática).
-- Falta fornecer `.env.example`, `profiles.example.yml` e instruções de preenchimento para variáveis sensíveis.
-- Não versionar credenciais; usar Airflow Connections e Secret Backends.
+- `dbt_snowflake_dag.py` — DAG de debugging: executa `dbt debug` para validar configuração do dbt.
+- `dbt_inmet_dag.py` — Executa modelos dbt por ano; seleciona `dados_meteriologicos_inmet` via `--select` lendo CSVs INMET no S3.
+- `inmet_data_to_snowflake_dbt_etl.py` — Pipeline ELT principal: cria file formats/staging, lista S3 e executa `COPY INTO` para staging.
+- `read_data_then_sent.py` — Leitura de S3 com pandas e carga via `write_pandas` no Snowflake.
+- `inmet_csv_to_s3*` — Variações de download/envelope para S3 (streaming, in-memory, paralelização).
+- `inmet_data_download*.py` — Download e preparação por ano.
+- `inmet_data_cleaner.py`, `clean_s3_keep_go_csv.py` — Limpeza e retenção seletiva no bucket S3.
 
----
 
-## Sugestões de curto prazo (práticas)
-
-1. Adicionar `profiles.example.yml` para dbt (Snowflake) e `.env.example` com variáveis esperadas.
-2. Criar `src/` com helpers reutilizáveis e um teste pytest simples (S3 list, parser CSV).
-3. Adicionar `LICENSE` (MIT/Apache) e `CONTRIBUTING.md`.
-4. Criar CI (GitHub Actions) com lint + pytest + dbt test (opcional, em infra separada).
 
 ---
 
-## Checklist
 
-Itens OK ✅
-- README com diagrama e contexto (atualizado nesta versão).
-- DAGs em `dags/` com comentários e docstrings.
-- `requirements.txt` e `Dockerfile` presentes.
-- dbt project presente.
+## 👥 Equipe
 
-Itens pendentes ⚠️
-- Criar `src/` para código reutilizável.
-- `profiles.example.yml` e `.env.example` ausentes.
-- Padronizar `profiles.yml` (Snowflake vs ClickHouse).
-- Adicionar LICENSE e CONTRIBUTING.md.
-- Implementar testes e CI.
+| Foto | Nome |  GitHub |
+|:---:|:---|:---|
+| ![Fabioaugustmp](https://github.com/Fabioaugustmp.png?size=50) | **Fabio Augusto Marques Paula**  | [@Fabioaugustmp](https://github.com/Fabioaugustmp) |
+| ![ficheles](https://github.com/ficheles.png?size=50) | **Rafael Fideles**  | [@Ficheles](https://github.com/ficheles) |
+|  | **Raony Nascimento**  | nascimento.raony@gmail.com |
+|  | **Marcelo Carvalho**  | mcarvalho.eng@gmail.com |
 
 ---
-
-Se desejar, posso agora:
-
-- Gerar `profiles.example.yml` para Snowflake e um `.env.example` com as variáveis necessárias;
-- Criar um `src/` inicial com S3/Snowflake helpers e um teste pytest básico;
-- Adicionar `LICENSE` (me diga MIT ou Apache-2.0).
-
-Indique qual ação quer que eu execute em seguida e eu aplico as alterações automaticamente.
