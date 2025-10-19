@@ -8,7 +8,7 @@ Aqui está o fluxo de trabalho automatizado para o projeto de potencial energét
 ```mermaid
 graph TD
     subgraph "Fontes de Dados Externas"
-        A["Dados em Arquivos<br/>- ANEEL (Usinas CSV)<br/>- IBGE (Shapefiles)<br/>- INMET (CSVs Meteorológicos)<br/>- ONS (Shapefiles de Rede)<br/>- IMB (PIB CSV)"]
+        A["Dados em Arquivos<br/>- ANEEL (Usinas CSV)<br/>- IBGE (Shapefiles)<br/>- INMET (CSVs Meteorológicos)<br/>- ONS (Shapefiles de Rede)<br/>- IMB (PIB CSV)<br/>- BDE GOIÁS (Banco de Dados Estatísticos)"]
     end
 
     subgraph "Orquestração e Execução"
