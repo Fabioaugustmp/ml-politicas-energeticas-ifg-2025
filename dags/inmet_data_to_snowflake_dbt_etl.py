@@ -9,8 +9,6 @@ from airflow.decorators import dag, task, task_group
 from airflow.utils.task_group import TaskGroup
 # Using the generic SQL operator for stability
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator 
-from airflow.operators.bash import BashOperator 
-from airflow.operators.empty import EmptyOperator
 from datetime import datetime, timedelta
 
 # Configure logger

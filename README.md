@@ -1,9 +1,24 @@
-# Projeto Goiás Renovável - ml-politicas-energeticas-ifg-2025
-PROJETO — MÓDULO 2: Machine Learning para Políticas Públicas Energéticas - POS IA IFG 2025/1
+# Projeto Goiás Renovável — ml-politicas-energeticas-ifg-2025
 
-## Arquitetura do Pipeline de Dados e MLOps
 
-Aqui está o fluxo de trabalho automatizado para o projeto de potencial energético, desde a extração de dados até o treinamento do modelo.
+
+# Descrição do projeto
+
+Este repositório contém o código, DAGs, notebooks e utilitários para o pipeline de ingestão, transformação (dbt) e treino de modelos para o projeto "Goiás Renovável" — Módulo 2 do curso POS IA IFG (2025/1). O fluxo geral é ingestão de dados públicos → armazenamento em S3 → carga no DWH → transformações com dbt → treinamento e registro de modelos.
+
+## Estrutura do repositório (visão simplificada)
+
+- `dags/` — Airflow DAGs responsáveis por ingestão, ETL/ELT e tarefas operacionais.
+- `dbt/` e `include/dbt_inmet_s3_ingestion/` — projetos dbt com modelos SQL para transformação de dados INMET/RAW.
+- `scripts/` — utilitários (upload S3, manipulação de nomes, helpers).
+- `drive/` — amostras de dados e artefatos (não versionar dados sensíveis em repositórios públicos).
+- Notebooks na raiz (`*.ipynb`) — análises exploratórias e notebooks de treinamento (Colab-ready).
+- `requirements.txt` — dependências Python (existem também `requirements.txt` em subprojetos/dbt).
+- `Dockerfile`, `compose/` — configuração de runtime para Airflow/Astro.
+
+> Observação: a lógica auxiliar está espalhada entre `dags/` e `scripts/`. Recomenda-se consolidar em `src/` para melhor testabilidade e reutilização.
+
+---
 
 ```mermaid
 graph TD
@@ -56,57 +71,125 @@ graph TD
     S3_MODELS -->|Deploy| G
 ```
 
+---
 
-# Activate DBT env
+## Setup mínimo (local de desenvolvimento)
 
+1) Criar ambiente Python e instalar dependências:
 
 ```bash
- conda activate ml-dbt
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-conda deactivate
-Overview
-========
+2) Configurar conexões e variáveis (Airflow):
+- Criar conexões `aws_default` e `snowflake_default` via UI do Airflow ou `airflow connections add`.
+- Preferir Secret Backends ou AWS Secrets Manager para credenciais.
 
-Welcome to Astronomer! This project was generated after you ran 'astro dev init' using the Astronomer CLI. This readme describes the contents of the project, as well as how to run Apache Airflow on your local machine.
+3) Rodar Airflow local (ex.: Astronomer ou docker-compose conforme `compose/`):
 
-Project Contents
-================
+```bash
+# Exemplo com Astro (se usar Astronomer):
+# astro dev start
 
-Your Astro project contains the following files and folders:
+# Exemplo com docker-compose (ajuste caminhos conforme necessário):
+# docker-compose -f compose/airflow.yml up --build
+```
 
-- dags: This folder contains the Python files for your Airflow DAGs. By default, this directory includes one example DAG:
-    - `example_astronauts`: This DAG shows a simple ETL pipeline example that queries the list of astronauts currently in space from the Open Notify API and prints a statement for each astronaut. The DAG uses the TaskFlow API to define tasks in Python, and dynamic task mapping to dynamically print a statement for each astronaut. For more on how this DAG works, see our [Getting started tutorial](https://www.astronomer.io/docs/learn/get-started-with-airflow).
-- Dockerfile: This file contains a versioned Astro Runtime Docker image that provides a differentiated Airflow experience. If you want to execute other commands or overrides at runtime, specify them here.
-- include: This folder contains any additional files that you want to include as part of your project. It is empty by default.
-- packages.txt: Install OS-level packages needed for your project by adding them to this file. It is empty by default.
-- requirements.txt: Install Python packages needed for your project by adding them to this file. It is empty by default.
-- plugins: Add custom or community plugins for your project to this file. It is empty by default.
-- airflow_settings.yaml: Use this local-only file to specify Airflow Connections, Variables, and Pools instead of entering them in the Airflow UI as you develop DAGs in this project.
+4) Executar dbt (dentro do ambiente/contêiner apropriado):
 
-Deploy Your Project Locally
-===========================
+```bash
+# entre no diretório do projeto dbt
+cd include/dbt_inmet_s3_ingestion
+# dbt run --profiles-dir . --project-dir .
+```
 
-Start Airflow on your local machine by running 'astro dev start'.
+---
 
-This command will spin up five Docker containers on your machine, each for a different Airflow component:
+## DAGs (descrição breve) — atenção ao diretório `dags/`
 
-- Postgres: Airflow's Metadata Database
-- Scheduler: The Airflow component responsible for monitoring and triggering tasks
-- DAG Processor: The Airflow component responsible for parsing DAGs
-- API Server: The Airflow component responsible for serving the Airflow UI and API
-- Triggerer: The Airflow component responsible for triggering deferred tasks
+Lista resumida das DAGs encontradas e propósito operacional (mantenha esta seção atualizada):
 
-When all five containers are ready the command will open the browser to the Airflow UI at http://localhost:8080/. You should also be able to access your Postgres Database at 'localhost:5432/postgres' with username 'postgres' and password 'postgres'.
+- `dbt_snowflake_dag.py`
+  - DAG de debugging: procura `profiles.yml` e executa `dbt debug` para validar configuração do dbt.
 
-Note: If you already have either of the above ports allocated, you can either [stop your existing Docker containers or change the port](https://www.astronomer.io/docs/astro/cli/troubleshoot-locally#ports-are-not-available-for-my-local-airflow-webserver).
+- `dbt_inmet_dag.py`
+  - Orquestra execução de modelos dbt por ano. Invoca `dbt run --select dados_meteriologicos_inmet` passando variável `inmet_s3_path` para consumir CSVs INMET no S3.
 
-Deploy Your Project to Astronomer
-=================================
+- `inmet_data_to_snowflake_dbt_etl.py`
+  - Pipeline ELT principal: cria file formats/staging no Snowflake, enumera arquivos S3 por ano, executa `COPY INTO` para inserir raw CSVs no staging e mapeia tasks por arquivo/ano com TaskFlow e TaskGroup.
 
-If you have an Astronomer account, pushing code to a Deployment on Astronomer is simple. For deploying instructions, refer to Astronomer documentation: https://www.astronomer.io/docs/astro/deploy-code/
+- `read_data_then_sent.py` (s3_to_snowflake_inmet_loader)
+  - Lê arquivos S3 via boto3/S3Hook, processa CSV com pandas (latin-1, skiprows) e escreve no Snowflake via `write_pandas`.
 
-Contact
-=======
+- Variações `inmet_csv_to_s3*` (`inmet_csv_to_s3.py`, `inmet_csv_to_s3_all_years.py`, `inmet_csv_to_s3_decorators.py`, `inmet_csv_to_s3_streaming`)
+  - Pipelines para baixar ZIPs do portal INMET, extrair CSVs (local ou em memória) e enviar para S3 — diferentes estratégias (streaming, in-memory, paralelização).
 
-The Astronomer CLI is maintained with love by the Astronomer team. To report a bug or suggest a change, reach out to our support.
+- `inmet_data_download.py`, `inmet_data_download_all.py`
+  - DAGs focadas no download e preparação dos arquivos (por ano).
+
+- `inmet_data_cleaner.py`, `clean_s3_keep_go_csv.py`
+  - Limpeza e retenção seletiva no bucket S3 (mantém arquivos que contenham padrão `_GO_` ou `GO`).
+
+Observação: a maioria dos DAGs inclui comentários explicativos — bom para operação. Recomendo extrair helpers (S3 list/upload, parsing CSV, COPY INTO builders) para `src/`.
+
+---
+
+## Uso do dbt para ELT e Snowflake
+
+O projeto usa dbt como camada de transformação (T no ELT). Padrão observado:
+
+1. Ingestão: arquivos CSV são colocados no S3 (raw).
+2. Load: DAGs realizam a carga para o DWH (Snowflake) — via `COPY INTO` ou `write_pandas`.
+3. Transformação com dbt: os modelos dbt leem as tabelas staging no DWH e produzem tabelas/visões analíticas (marts).
+
+Recomendações práticas:
+
+- Padronizar `profiles.yml` para Snowflake (ou documentar perfis distintos) e colocar `profiles.example.yml` no repositório com placeholders.
+- Preferir `COPY INTO` para cargas em escala; use `write_pandas` para cargas pequenas/experimentais.
+- Criar jobs dbt (`dbt run`, `dbt test`) como tasks airflow ou via Cosmos (já há indícios de uso de `cosmos.DbtDag`).
+
+---
+
+## Observações sobre reprodutibilidade e segurança
+
+- Já existem `Dockerfile` e `compose/` para rodar Airflow (boa prática).
+- Falta fornecer `.env.example`, `profiles.example.yml` e instruções de preenchimento para variáveis sensíveis.
+- Não versionar credenciais; usar Airflow Connections e Secret Backends.
+
+---
+
+## Sugestões de curto prazo (práticas)
+
+1. Adicionar `profiles.example.yml` para dbt (Snowflake) e `.env.example` com variáveis esperadas.
+2. Criar `src/` com helpers reutilizáveis e um teste pytest simples (S3 list, parser CSV).
+3. Adicionar `LICENSE` (MIT/Apache) e `CONTRIBUTING.md`.
+4. Criar CI (GitHub Actions) com lint + pytest + dbt test (opcional, em infra separada).
+
+---
+
+## Checklist
+
+Itens OK ✅
+- README com diagrama e contexto (atualizado nesta versão).
+- DAGs em `dags/` com comentários e docstrings.
+- `requirements.txt` e `Dockerfile` presentes.
+- dbt project presente.
+
+Itens pendentes ⚠️
+- Criar `src/` para código reutilizável.
+- `profiles.example.yml` e `.env.example` ausentes.
+- Padronizar `profiles.yml` (Snowflake vs ClickHouse).
+- Adicionar LICENSE e CONTRIBUTING.md.
+- Implementar testes e CI.
+
+---
+
+Se desejar, posso agora:
+
+- Gerar `profiles.example.yml` para Snowflake e um `.env.example` com as variáveis necessárias;
+- Criar um `src/` inicial com S3/Snowflake helpers e um teste pytest básico;
+- Adicionar `LICENSE` (me diga MIT ou Apache-2.0).
+
+Indique qual ação quer que eu execute em seguida e eu aplico as alterações automaticamente.
