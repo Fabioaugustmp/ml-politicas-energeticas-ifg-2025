@@ -89,3 +89,67 @@ SELECT
 FROM RAW.STG_INMET_DATA
 GROUP BY TO_CHAR(TO_DATE("Data", 'YYYY/MM/DD'), 'YYYY-MM')
 ORDER BY mes;
+
+
+
+CREATE OR REPLACE TABLE CORE.STG_INMET_WMO (
+    region              VARCHAR(10),
+    uf                  VARCHAR(2),
+    station             VARCHAR(100),
+    id_wmo              VARCHAR(10),
+    latitude            FLOAT,
+    longitude           FLOAT,
+    altitude            FLOAT
+);
+
+CREATE TABLE IF NOT EXISTS RAW.INGESTION_LOGS (
+    FILENAME VARCHAR(500),
+    YEAR INTEGER,
+    STATUS VARCHAR(50),
+    ELAPSED_SECONDS FLOAT,
+    INGESTED_AT TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+);
+
+
+
+SELECT COUNT(*) FROM LAB_PIPELINE.CORE.STG_INMET_WMO
+        WHERE ID_WMO = 'A002'
+
+CREATE TABLE IF NOT EXISTS RAW.INGESTION_LOGS (
+            FILENAME VARCHAR(500),
+            YEAR INTEGER,
+            STATUS VARCHAR(50),
+            ELAPSED_SECONDS FLOAT,
+            INGESTED_AT TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+        );
+
+SELECT * FROM LAB_PIPELINE.RAW.STG_INMET_DATA
+
+-- DROP TABLE LAB_PIPELINE.RAW.STG_INMET_DATA
+        COPY INTO LAB_PIPELINE.RAW.STG_INMET_DATA
+            FROM (
+                -- CREATE TABLE LAB_PIPELINE.RAW.STG_INMET_DATA as 
+                SELECT --'A002' AS "ID_WMO",
+                   $1 AS "Data",
+                   $2 AS "hora_utc",
+                   $3 AS "precipitação_total_horário_(mm)",
+                   $4 AS "pressao_atmosferica_ao_nivel_da_estacao_horaria_(m-b)",
+                   $5 AS "pressão_atmosferica_maxna_hora_ant_(aut)_(m-b)",
+                   $6 AS "pressão_atmosferica_min_na_hora_ant_(aut)_(m-b)",
+                   $7 AS "radiacao_global_(kj/m²)",
+                   $8 AS "temperatura_do_ar_bulbo_seco_horaria_(°c)",
+                   $9 AS "temperatura_do_ponto_de_orvalho_(°c)",
+                   $10 AS "temperatura_máxima_na_hora_ant_(aut)_(°c)",
+                   $11 AS "temperatura_mínima_na_hora_ant_(aut)_(°c)",
+                   $12 AS "temperatura_orvalho_max_na_hora_ant_(aut)_(°c)",
+                   $13 AS "temperatura_orvalho_min_na_hora_ant_(aut)_(°c)",
+                   $14 AS "umidade_rel_max_na_hora_ant_(aut)_(%)",
+                   $15 AS "umidade_rel_min_na_hora_ant_(aut)_(%)",
+                   $16 AS "umidade_relativa_do_ar_horaria_(%)",
+                   $17 AS "vento_direcao_horaria_(gr)_(°_(gr))",
+                   $18 AS "vento_rajada_maxima_(m/s)",
+                   $19 AS "vento_velocidade_horaria_(m/s)"
+                FROM @LAB_PIPELINE.RAW.STAGE_RAW/INMET_CO_GO_A002_GOIANIA_01-01-2022_A_31-12-2022.CSV
+                (FILE_FORMAT => 'LAB_PIPELINE.RAW.INMET_CSV_FORMAT')
+                
+            );

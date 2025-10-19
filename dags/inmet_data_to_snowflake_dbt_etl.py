@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import pendulum
 import logging
 import time
-from airflow.models.dag import DAG
-from airflow.utils.dates import days_ago
 from airflow.decorators import dag, task, task_group
 from airflow.utils.task_group import TaskGroup
 # Using the generic SQL operator for stability
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator 
 from datetime import datetime, timedelta
+import io
+import boto3
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -50,6 +49,90 @@ def get_files_in_bucket(bucket: str, prefix: str) -> list:
                 if key.lower().endswith(".csv"):
                     files.append(key)
     return files
+
+def get_id_wmo_from_filename(filename: str) -> str:
+    """Extract ID_WMO from the filename format 'INMET_<REGION>_<STATE>_<ID_WMO>_...csv'."""
+    parts = filename.split('_')
+    if len(parts) >= 2:
+        return parts[3]
+    else:
+        raise ValueError(f"Filename {filename} does not conform to expected format.")
+
+def get_station_info_from_filename(s3_filepath: str) -> dict:
+    """Extract station information from the filename format 'INMET_<REGION>_<STATE>_<ID_WMO>_...csv'."""
+    s3_client = boto3.client("s3")
+
+    logging.info(f"Fetching station info from S3 file: inmet/{s3_filepath}")
+    response = s3_client.get_object(Bucket=S3_BUCKET, Key=f'inmet/{s3_filepath}')
+    content = response['Body'].read().decode('latin-1')
+    file_in_memory = io.StringIO(content)
+
+    # Lê cabeçalho de 8 linhas
+    header_lines = [next(file_in_memory) for _ in range(8)]
+    region = header_lines[0].split(';')[1].strip()
+    uf = header_lines[1].split(';')[1].strip()
+    station = header_lines[2].split(';')[1].strip()
+    id_wmo = header_lines[3].split(';')[1].strip()
+    latitude = header_lines[4].split(';')[1].replace(',', '.').strip()
+    longitude = header_lines[5].split(';')[1].replace(',', '.').strip()
+    altitude = header_lines[6].split(';')[1].replace(',', '.').strip()
+    
+    return {
+        'id_wmo': id_wmo,
+        'region': region,
+        'uf': uf,
+        'station': station,
+        'latitude': latitude,
+        'longitude': longitude,
+        'altitude': altitude
+    }
+    
+    
+def insert_metadata_record(filename: str, year: int, status: str, elapsed_seconds: float):
+    """Insert a metadata record into the Snowflake metadata table."""
+    from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+
+    hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
+    # Then insert the record
+    sql = f"""
+        INSERT INTO {SNOWFLAKE_DATABASE}.RAW.INGESTION_LOGS
+        (FILENAME, YEAR, STATUS, ELAPSED_SECONDS, INGESTED_AT)
+        VALUES ('{filename}', {year}, '{status}', {elapsed_seconds}, CURRENT_TIMESTAMP());
+    """
+    hook.run(sql, autocommit=True)
+
+
+def insert_cod_wmo_record(filename: str, id_wmo: str):
+    """Insert a record into the COD_WMO table if it doesn't exist."""
+    from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+
+    hook = SnowflakeHook(snowflake_conn_id=SNOWFLAKE_CONN_ID)
+    sql_check = f"""
+        SELECT COUNT(*) FROM {SNOWFLAKE_DATABASE}.CORE.STG_INMET_WMO
+        WHERE ID_WMO = '{id_wmo}';
+    """
+    result = hook.get_first(sql_check)
+    if result and result[0] == 0:
+
+        station_info = get_station_info_from_filename(filename)
+
+        region = station_info['region']
+        uf = station_info['uf']
+        station = station_info['station']
+        latitude = float(station_info['latitude'])
+        longitude = float(station_info['longitude'])
+        altitude = float(station_info['altitude']) if station_info['altitude'] else 'NULL'
+        
+
+        sql_insert = f"""
+            INSERT INTO {SNOWFLAKE_DATABASE}.CORE.STG_INMET_WMO (id_wmo, region, uf,
+                station, latitude, longitude, altitude )
+            VALUES ('{id_wmo}', '{region}', '{uf}', 
+            '{station}', '{latitude}', 
+            '{longitude}', '{altitude}');
+        """
+        hook.run(sql_insert, autocommit=True)    
+
 
 default_args = {
     "owner": "airflow",
@@ -125,8 +208,14 @@ def inmet_data_to_snowflake_dbt_etl():
         
         start_time = time.time()
         year = file_info['year']
-        s3_file_path = file_info['s3_path']
         filename = file_info['filename']
+        s3_file_path = file_info['s3_path']   # por ex. "2024/INMET_...CSV" se seu file_info estiver assim
+        # station_info = get_station_info_from_filename(s3_file_path)
+
+        # Acessando campos
+        id_wmo = get_id_wmo_from_filename(filename)      
+        insert_cod_wmo_record(s3_file_path, id_wmo)
+        
         
         logger.info(f"[YEAR {year}] Processing file: {filename}")
         logger.info(f"[YEAR {year}] S3 path: {s3_file_path}")
@@ -135,7 +224,8 @@ def inmet_data_to_snowflake_dbt_etl():
         sql = f"""
             COPY INTO {FULLY_QUALIFIED_TABLE}
             FROM (
-                SELECT $1 AS "Data",
+                SELECT '{id_wmo}' AS "ID_WMO",
+                   $1 AS "Data",
                    $2 AS "hora_utc",
                    $3 AS "precipitação_total_horário_(mm)",
                    $4 AS "pressao_atmosferica_ao_nivel_da_estacao_horaria_(m-b)",
@@ -166,6 +256,7 @@ def inmet_data_to_snowflake_dbt_etl():
         elapsed = time.time() - start_time
         logger.info(f"[YEAR {year}] File processed successfully in {elapsed:.2f}s")
         logger.info(f"[YEAR {year}] Query result: {result}")
+        insert_metadata_record(filename, year, 'success', elapsed)
         
         return {
             'filename': filename,
