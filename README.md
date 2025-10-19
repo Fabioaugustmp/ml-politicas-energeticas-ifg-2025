@@ -21,7 +21,7 @@ graph TD
     end
 
     subgraph "Data Warehouse (Processamento e Análise)"
-        CH("ClickHouse")
+        CH("SnowFlake")
         CH_RAW["Tabelas Brutas<br/>raw_aneel, raw_inmet..."]
         CH_MART["Tabela Analítica<br/>mart_microrregiao_potencial"]
         CH --- CH_RAW & CH_MART
