@@ -168,6 +168,7 @@ Outros scripts:
 
 - `exploratory_data_analysis.ipynb` — EDA básica.
 - `CC_ML_TRAINING_MODEL.ipynb` — treinamento de modelo (Colab-ready).
+- [`CC_ML_TRAINING_MODEL.ipynb`](https://colab.research.google.com/drive/1jHJq_-zXsGDkPS3lfudIrirHqU68i9jX?usp=sharing)  — treinamento de modelo (Colab Execution).
 
 Recomendação: use um kernel Python do seu virtualenv (`.venv`) e garanta que as dependências estejam instaladas.
 
