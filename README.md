@@ -8,7 +8,7 @@ Este repositório contém o código, DAGs, notebooks e utilitários para o pipel
 
 [Análise Potencial](http://20.206.241.65:8501/)
 
-[![Goiás](images/goias-data.png)](http://20.206.241.65:8501/)
+[![Goiás](images/DATA-VIEW.gif)](http://20.206.241.65:8501/)
 ## Arquitetura (mermaid)
 
 ```mermaid
@@ -185,9 +185,24 @@ Recomendação: use um kernel Python do seu virtualenv (`.venv`) e garanta que a
 - `inmet_data_cleaner.py`, `clean_s3_keep_go_csv.py` — Limpeza e retenção seletiva no bucket S3.
 
 
-
 ---
 
+## App Viewer
+
+![Goias Data](images/goias-data.png)
+
+Para rodas a aplicação de visualização e treinamento do modelo:
+
+1.  Navegue até ao diretório `app-viewer`:
+    ```bash
+    cd app-viewer
+    ```
+
+2.  Build e execute a aplicação utilizando o Docker Compose:
+    ```bash
+    docker compose up -d --build
+    ```
+    Após a finalização a aplicação estará disponível em  http://localhost:8501.
 
 ## 👥 Equipe
 
@@ -199,3 +214,4 @@ Recomendação: use um kernel Python do seu virtualenv (`.venv`) e garanta que a
 | ![NascimentoRaony](https://github.com/NascimentoRaony.png?size=50) | **Raony N. Nogueira**  | [@NascimentoRaony](https://github.com/NascimentoRaony) |
 
 ---
+
