@@ -4,7 +4,11 @@
 
 Este repositório contém o código, DAGs, notebooks e utilitários para o pipeline de ingestão, transformação (dbt) e treinamento de modelos do projeto "Goiás Renovável" — Módulo 2 do curso POS IA IFG (2025/1). O fluxo geral é: ingestão de dados públicos → armazenamento em S3 → carga no DWH → transformações com dbt → treinamento e registro de modelos.
 
-![Goiás](images/goias-data.png)
+## Modelo de Análise
+
+[Análise Potencial](http://20.206.241.65:8501/)
+
+[![Goiás](images/goias-data.png)](http://20.206.241.65:8501/)
 ## Arquitetura (mermaid)
 
 ```mermaid
