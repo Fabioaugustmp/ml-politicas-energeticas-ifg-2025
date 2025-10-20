@@ -279,7 +279,8 @@ with tab2:
     st.download_button(
         label="Download do Ranking como CSV",
         data=csv,
-        file_name=f"ranking_{tipo_potencial.lower().replace(' ', '_')}.csv",
+        # file_name=f"ranking_{tipo_potencial.lower().replace(' ', '_')}.csv",
+        file_name=f"ranking_{str(tipo_potencial).lower().replace(' ', '_')}.csv",
         mime='text/csv',
     )
     

@@ -1,21 +1,24 @@
-# app/Dockerfile
+# Proper Dockerfile for the Streamlit application
 
 FROM python:3.9-slim
 
-WORKDIR /app/app-viwer
+WORKDIR /app
 
+# Install system dependencies. `build-essential` is often needed for Python packages.
 RUN apt-get update && apt-get install -y \
     build-essential \
-    curl \    
-    git \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/Fabioaugustmp/ml-politicas-energeticas-ifg-2025.git .
+# Copy the requirements file and install dependencies first to leverage Docker caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip3 install -r requirements.txt
+# Copy the rest of the application code
+COPY . .
 
 EXPOSE 8501
 
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501"]
