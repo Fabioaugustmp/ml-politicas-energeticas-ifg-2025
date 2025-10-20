@@ -6,3 +6,5 @@ matplotlib
 seaborn
 pydeck
 scikit-learn
+duckdb
+plotly
