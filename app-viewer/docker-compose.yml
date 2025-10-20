@@ -4,4 +4,4 @@ services:
     build: .
     ports:
       - "8501:8501"
-    mem_limit: 4g
+    mem_limit: 5g
