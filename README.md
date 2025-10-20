@@ -187,9 +187,9 @@ Recomendação: use um kernel Python do seu virtualenv (`.venv`) e garanta que a
 
 | Foto | Nome |  GitHub |
 |:---:|:---|:---|
-| ![Fabioaugustmp](https://github.com/Fabioaugustmp.png?size=50) | **Fabio Augusto Marques Paula**  | [@Fabioaugustmp](https://github.com/Fabioaugustmp) |
-| ![ficheles](https://github.com/ficheles.png?size=50) | **Rafael Fideles**  | [@Ficheles](https://github.com/ficheles) |
-|  | **Raony Nascimento**  | nascimento.raony@gmail.com |
-|  | **Marcelo Carvalho**  | mcarvalho.eng@gmail.com |
+| ![Fabioaugustmp](https://github.com/Fabioaugustmp.png?size=50) | **Fabio A. M. Paula |[@Fabioaugustmp](https://github.com/Fabioaugustmp) |
+| <img src="https://github.com/dr-marcelocarvalho.png" width="50"> | **Marcelo R. Carvalho**  | [@dr-marcelocarvalho](https://github.com/dr-marcelocarvalho)|
+| ![ficheles](https://github.com/ficheles.png?size=50) | **Rafael F. Costa**  | [@Ficheles](https://github.com/ficheles) |
+| ![NascimentoRaony](https://github.com/NascimentoRaony.png?size=50) | **Raony N. Nogueira**  | [@NascimentoRaony](https://github.com/NascimentoRaony) |
 
 ---
