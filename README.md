@@ -4,11 +4,28 @@
 
 Este repositório contém o código, DAGs, notebooks e utilitários para o pipeline de ingestão, transformação (dbt) e treinamento de modelos do projeto "Goiás Renovável" — Módulo 2 do curso POS IA IFG (2025/1). O fluxo geral é: ingestão de dados públicos → armazenamento em S3 → carga no DWH → transformações com dbt → treinamento e registro de modelos.
 
+## Sumário
+
+- [Visão Geral](#visão-geral)
+- [Modelo de Análise](#modelo-de-análise)
+- [Arquitetura](#arquitetura-mermaid)
+- [Estrutura do Repositório](#estrutura-do-repositório-resumo)
+- [Pré-requisitos](#pré-requisitos)
+- [Setup Rápido (Local)](#setup-rápido-local)
+- [Executando com Docker Compose (Airflow)](#executando-com-docker-compose-airflow)
+- [Executando o App Viewer](#app-viewer)
+- [Executando dbt](#executando-dbt)
+- [Scripts Úteis](#scripts-úteis)
+- [Notebooks](#notebooks)
+- [DAGs](#dags-descrição-breve)
+- [Equipe](#-equipe)
+
 ## Modelo de Análise
 
 [Análise Potencial](http://20.206.241.65:8501/)
 
 [![Goiás](images/DATA-VIEW.gif)](http://20.206.241.65:8501/)
+
 ## Arquitetura (mermaid)
 
 ```mermaid
@@ -134,6 +151,25 @@ docker compose -f compose/airflow.yml down -v
 
 ---
 
+## App Viewer
+
+Para rodar a aplicação de visualização e treinamento do modelo:
+
+1.  Navegue até ao diretório `app-viewer`:
+    ```bash
+    cd app-viewer
+    ```
+
+2.  Build e execute a aplicação utilizando o Docker Compose:
+    ```bash
+    docker compose up -d --build
+    ```
+    Após a finalização a aplicação estará disponível em  http://localhost:8501.
+
+![Goias Data](images/goias-data.png)
+
+---
+
 ## Executando dbt
 
 Execute dbt no projeto de ingestão INMET (ajuste o profile conforme seu ambiente):
@@ -187,23 +223,6 @@ Recomendação: use um kernel Python do seu virtualenv (`.venv`) e garanta que a
 
 ---
 
-## App Viewer
-
-![Goias Data](images/goias-data.png)
-
-Para rodas a aplicação de visualização e treinamento do modelo:
-
-1.  Navegue até ao diretório `app-viewer`:
-    ```bash
-    cd app-viewer
-    ```
-
-2.  Build e execute a aplicação utilizando o Docker Compose:
-    ```bash
-    docker compose up -d --build
-    ```
-    Após a finalização a aplicação estará disponível em  http://localhost:8501.
-
 ## 👥 Equipe
 
 | Foto | Nome |  GitHub |
@@ -214,4 +233,3 @@ Para rodas a aplicação de visualização e treinamento do modelo:
 | ![NascimentoRaony](https://github.com/NascimentoRaony.png?size=50) | **Raony N. Nogueira**  | [@NascimentoRaony](https://github.com/NascimentoRaony) |
 
 ---
-
