@@ -22,6 +22,8 @@ Este repositório contém o código, DAGs, notebooks e utilitários para o pipel
 
 ## Modelo de Análise
 
+Acesse a aplicação interativa para visualizar o potencial energético de Goiás, utilizar os dados do modelo e simular diferentes cenários de entrada.
+
 [Análise Potencial](http://20.206.241.65:8501/)
 
 [![Goiás](images/DATA-VIEW.gif)](http://20.206.241.65:8501/)
