@@ -18,6 +18,7 @@ Este repositório contém o código, DAGs, notebooks e utilitários para o pipel
 - [Scripts Úteis](#scripts-úteis)
 - [Notebooks](#notebooks)
 - [DAGs](#dags-descrição-breve)
+- [Screenshots](#Screenshots)
 - [Equipe](#-equipe)
 
 ## Modelo de Análise
@@ -214,6 +215,15 @@ Recomendação: use um kernel Python do seu virtualenv (`.venv`) e garanta que a
 
 ## DAGs (descrição breve)
 
+[Airflow](http://18.118.197.49/home)
+user: ml-project
+password: user
+
+<img width="1897" height="692" alt="image" src="https://github.com/user-attachments/assets/49cdb407-7781-4a77-9836-f3050673bd0c" />
+
+
+Acesse a ferramenta para visualizar as dags, use com conciência.
+
 - `dbt_snowflake_dag.py` — DAG de debugging: executa `dbt debug` para validar configuração do dbt.
 - `dbt_inmet_dag.py` — Executa modelos dbt por ano; seleciona `dados_meteriologicos_inmet` via `--select` lendo CSVs INMET no S3.
 - `inmet_data_to_snowflake_dbt_etl.py` — Pipeline ELT principal: cria file formats/staging, lista S3 e executa `COPY INTO` para staging.
@@ -222,8 +232,11 @@ Recomendação: use um kernel Python do seu virtualenv (`.venv`) e garanta que a
 - `inmet_data_download*.py` — Download e preparação por ano.
 - `inmet_data_cleaner.py`, `clean_s3_keep_go_csv.py` — Limpeza e retenção seletiva no bucket S3.
 
-
 ---
+## Screenshots
+
+Uma biblioteca de imagens gerais.
+[Imagens Gerais](https://drive.google.com/drive/folders/1VBCNCwOACQPG-asrC9vZeWdeUE87gTS_?usp=sharing)
 
 ## 👥 Equipe
 
